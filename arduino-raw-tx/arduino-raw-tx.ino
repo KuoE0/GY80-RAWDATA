@@ -27,11 +27,10 @@ void loop() {
 
 	raw = accel.readRaw();
 
-	Serial.print("RAW:  ");
 	Serial.print(raw.XAxis);
-	Serial.print("\t");
+	Serial.print(":");
 	Serial.print(raw.YAxis);
-	Serial.print("\t");
+	Serial.print(":");
 	Serial.println(raw.ZAxis);
 
 	delay(10);
