@@ -19,6 +19,9 @@ float[] accel_x = new float[MAX_SAMPLE];
 float[] accel_y = new float[MAX_SAMPLE];
 float[] accel_z = new float[MAX_SAMPLE];
 
+String received_data;
+String[] data_list;
+
 int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 int WINDOW_PADDING = 20;
 int CHART_CARD_WIDTH = 480, CHART_CARD_HEIGHT = WINDOW_HEIGHT - WINDOW_PADDING * 2;
@@ -38,11 +41,9 @@ void setup() {
 
 	if (port_idx != -1) {
 		String portName = Serial.list()[port_idx];
-		myPort = new Serial(this, portName, 19200);
+		myPort = new Serial(this, portName, 9600);
 		myPort.clear();
-		// myPort.bufferUntil(lf);
-		// There are six signals to receive. Two bytes for each signal.
-		myPort.buffer(16);
+		myPort.bufferUntil('\n');
 	}
 
 	font = createFont("HelveticaNeue-Light", 22, true);
@@ -57,7 +58,7 @@ void draw() {
 	background(225);
 
 	draw_chart();
-	gen_random_signal();
+	// gen_random_signal();
 	delay(10);
 }
 
@@ -220,4 +221,43 @@ void gen_random_signal() {
 
 }
 
+void serialEvent(Serial p) {
 
+
+	try {
+		received_data = myPort.readStringUntil('\n');
+		received_data = trim(received_data);
+	}
+	catch (Exception e) {
+		println("READ FROM SERIAL");
+		println("Caught Exception");
+		println(e.toString());
+	}
+
+	try {
+		if (received_data != null) {
+
+			data_list = split(received_data, ':');
+
+			if (data_list.length == 3) {
+
+				float ax = float(trim(data_list[0]));
+				float ay = float(trim(data_list[1]));
+				float az = float(trim(data_list[2]));
+
+				if (update_ptr >= MAX_SAMPLE)
+					update_ptr = 0;
+
+				accel_x[update_ptr] = ax;
+				accel_y[update_ptr] = ay;
+				accel_z[update_ptr] = az;
+
+				++update_ptr;
+			}
+		}
+	}
+	catch (Exception e) {
+		println("Caught Exception");
+		println(e.toString());
+	}
+}
