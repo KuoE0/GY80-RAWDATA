@@ -4,8 +4,7 @@
  *       Desc: Processing code for plot GY-80 raw data
  *     Author: KuoE0
  *      Email: kuoe0.tw@gmail.com
- *   HomePage: http://kuoe0.ch/
- * LastChange: 2014-09-12 16:56:31
+ *   HomePage: http://blog.kuoe0.tw/
  *=============================================================================
  */
 
@@ -18,20 +17,22 @@ int update_ptr = MAX_SAMPLE;
 float[] accel_x = new float[MAX_SAMPLE];
 float[] accel_y = new float[MAX_SAMPLE];
 float[] accel_z = new float[MAX_SAMPLE];
+int record_sec_cnt = 0;
 
 String received_data;
 String[] data_list;
 
 int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 int WINDOW_PADDING = 20;
-int CHART_CARD_WIDTH = 480, CHART_CARD_HEIGHT = WINDOW_HEIGHT - WINDOW_PADDING * 2;
+int COLUMN_WIDHT_1 = 480, COLUMN_WIDHT_2 = 260;
+int CHART_CARD_HEIGHT = WINDOW_HEIGHT - WINDOW_PADDING * 2, RECORDER_CARD_HEIGHT = 130;
 int CHART_INTERVAL = 50, CHART_WIDTH = MAX_SAMPLE, CHART_HEIGHT = CHART_INTERVAL * 8;
 color CLR_ACCEL_X = #FF5722, CLR_ACCEL_Y = #259B24, CLR_ACCEL_Z = #03A9F4;
 color CLR_GYRO_X = #E51C23, CLR_GYRO_Y = #5677FC, CLR_GYRO_Z = #009688;
 color CLR_MAGN_X = #795548, CLR_MAGN_Y = #FFC107, CLR_MAGN_Z = #9C27B0;
 
-PFont font;
-PGraphics pg_chart, pg_legend;
+PFont helveticaLight, helveticaMedium, helveticaUltraLight;
+PGraphics pg_chart, pg_legend, pg_recorder;
 
 void setup() {
 
@@ -46,8 +47,10 @@ void setup() {
 		myPort.bufferUntil('\n');
 	}
 
-	font = createFont("HelveticaNeue-Light", 22, true);
-	textFont(font);
+	helveticaUltraLight = createFont("HelveticaNeue-Ultralight", 22, true);
+	helveticaLight = createFont("HelveticaNeue-Light", 22, true);
+	helveticaMedium = createFont("HelveticaNeue-Medium", 22, true);
+	textFont(helveticaLight);
 
 	for (int i = 0; i < MAX_SAMPLE; ++i) {
 		accel_x[i] = accel_y[i] = accel_z[i] = 0;
@@ -58,6 +61,8 @@ void draw() {
 	background(225);
 
 	draw_chart();
+	draw_recorder();
+
 	// gen_random_signal();
 	delay(10);
 }
@@ -104,10 +109,10 @@ void card(int x, int y, int width, int height) {
 void draw_chart() {
 
 	// draw card
-	card(WINDOW_PADDING, WINDOW_PADDING, CHART_CARD_WIDTH, CHART_CARD_HEIGHT);
+	card(WINDOW_PADDING, WINDOW_PADDING, COLUMN_WIDHT_1, CHART_CARD_HEIGHT);
 
 	// draw unit
-	fill(33);
+	fill(32);
 	textSize(16);
 	textAlign(RIGHT, CENTER);
 	text(str(0), WINDOW_PADDING * 3.5, WINDOW_PADDING * 3 + CHART_INTERVAL * 4);
@@ -201,6 +206,78 @@ void draw_chart() {
 
 	// put legend
 	image(pg_legend, WINDOW_PADDING * 2, WINDOW_PADDING * 3.5 + CHART_HEIGHT);
+
+}
+
+void draw_recorder() {
+	card(WINDOW_PADDING * 2 + COLUMN_WIDHT_1, WINDOW_PADDING, COLUMN_WIDHT_2, RECORDER_CARD_HEIGHT);
+
+	pg_recorder = createGraphics(COLUMN_WIDHT_2, RECORDER_CARD_HEIGHT);
+
+	pg_recorder.beginDraw();
+	pg_recorder.background(255);
+
+	// title
+	pg_recorder.fill(33);
+	pg_recorder.textSize(20);
+	pg_recorder.textAlign(LEFT, TOP);
+	pg_recorder.textFont(helveticaLight);
+	pg_recorder.text("Recorder", WINDOW_PADDING, WINDOW_PADDING);
+
+	// buttons
+	int BTN_WIDTH = 65;
+	pg_recorder.rectMode(CORNERS);
+	pg_recorder.noStroke();
+	pg_recorder.textFont(helveticaMedium);
+	pg_recorder.textSize(14);
+	pg_recorder.textAlign(CENTER, CENTER);
+
+	// + button
+	pg_recorder.noFill();
+	pg_recorder.rect(0, pg_recorder.height - 30, BTN_WIDTH, pg_recorder.height);
+	pg_recorder.fill(33);
+	pg_recorder.text("+", BTN_WIDTH * 0.5, pg_recorder.height - 15);
+
+	// - button
+	pg_recorder.noFill();
+	pg_recorder.rect(BTN_WIDTH, pg_recorder.height - 30, BTN_WIDTH * 2, pg_recorder.height);
+	pg_recorder.fill(33);
+	pg_recorder.text("-", BTN_WIDTH * 1.5, pg_recorder.height - 15);
+
+	// reset button
+	pg_recorder.noFill();
+	pg_recorder.rect(BTN_WIDTH * 2, pg_recorder.height - 30, BTN_WIDTH * 3, pg_recorder.height);
+	pg_recorder.fill(33);
+	pg_recorder.text("RESET", BTN_WIDTH * 2.5, pg_recorder.height - 15);
+
+	// start button
+	pg_recorder.noFill();
+	pg_recorder.rect(BTN_WIDTH * 3, pg_recorder.height - 30, BTN_WIDTH * 4, pg_recorder.height);
+	pg_recorder.fill(#FF9800);
+	pg_recorder.text("START", BTN_WIDTH * 3.5, pg_recorder.height - 15);
+
+	// underline
+	pg_recorder.stroke(#03A9F4);
+	pg_recorder.line(WINDOW_PADDING, pg_recorder.height - 38, pg_recorder.width / 2, pg_recorder.height - 38);
+	pg_recorder.line(WINDOW_PADDING, pg_recorder.height - 39, pg_recorder.width / 2, pg_recorder.height - 39);
+	pg_recorder.line(WINDOW_PADDING, pg_recorder.height - 40, pg_recorder.width / 2, pg_recorder.height - 40);
+	// record time
+	pg_recorder.textFont(helveticaUltraLight);
+	pg_recorder.fill(117);
+	pg_recorder.textSize(40);
+	pg_recorder.textAlign(RIGHT, BOTTOM);
+	pg_recorder.text(str(record_sec_cnt), pg_recorder.width / 2, pg_recorder.height - 40);
+
+	// second hint text
+	pg_recorder.fill(188);
+	pg_recorder.textSize(16);
+	pg_recorder.textFont(helveticaLight);
+	pg_recorder.textAlign(LEFT, BOTTOM);
+	pg_recorder.text("second", pg_recorder.width / 2 + WINDOW_PADDING, pg_recorder.height - 40);
+
+	pg_recorder.endDraw();
+	// put on card
+	image(pg_recorder, WINDOW_PADDING * 2 + COLUMN_WIDHT_1, WINDOW_PADDING);
 
 }
 
