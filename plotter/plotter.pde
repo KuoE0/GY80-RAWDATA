@@ -10,6 +10,23 @@
 
 import processing.serial.*;
 
+class Button {
+	public int x, y, width_radius, height_radius;
+	public Button(int _x, int _y, int _w, int _h) {
+		this.x = _x;
+		this.y = _y;
+		this.width_radius = _w;
+		this.height_radius = _h;
+	}
+	public boolean isInside(int _x, int _y) {
+		return _x >= this.x - this.width_radius && _x <= this.x + this.width_radius && _y >= this.y - this.height_radius && _y <= this.y + this.height_radius;
+	}
+	int getLeftTopX() { return this.x - this.width_radius; }
+	int getLeftTopY() { return this.y - this.height_radius; }
+	int getRightBottomX() { return this.x + this.width_radius; }
+	int getRightBottomY() { return this.y + this.height_radius; }
+};
+
 Serial myPort;
 final int MAX_SAMPLE = 400;
 
@@ -18,6 +35,7 @@ float[] accel_x = new float[MAX_SAMPLE];
 float[] accel_y = new float[MAX_SAMPLE];
 float[] accel_z = new float[MAX_SAMPLE];
 int record_sec_cnt = 0;
+boolean record_stat = false;
 
 String received_data;
 String[] data_list;
@@ -33,6 +51,7 @@ color CLR_MAGN_X = #795548, CLR_MAGN_Y = #FFC107, CLR_MAGN_Z = #9C27B0;
 
 PFont helveticaLight, helveticaMedium, helveticaUltraLight;
 PGraphics pg_chart, pg_legend, pg_recorder;
+Button btn_recorder_add, btn_recorder_sub, btn_recorder_reset, btn_recorder_action;
 
 void setup() {
 
@@ -237,24 +256,28 @@ void draw_recorder() {
 	pg_recorder.rect(0, pg_recorder.height - 30, BTN_WIDTH, pg_recorder.height);
 	pg_recorder.fill(33);
 	pg_recorder.text("+", BTN_WIDTH * 0.5, pg_recorder.height - 15);
+	btn_recorder_add = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 0.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
 
 	// - button
 	pg_recorder.noFill();
 	pg_recorder.rect(BTN_WIDTH, pg_recorder.height - 30, BTN_WIDTH * 2, pg_recorder.height);
 	pg_recorder.fill(33);
 	pg_recorder.text("-", BTN_WIDTH * 1.5, pg_recorder.height - 15);
+	btn_recorder_sub = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 1.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
 
 	// reset button
 	pg_recorder.noFill();
 	pg_recorder.rect(BTN_WIDTH * 2, pg_recorder.height - 30, BTN_WIDTH * 3, pg_recorder.height);
 	pg_recorder.fill(33);
 	pg_recorder.text("RESET", BTN_WIDTH * 2.5, pg_recorder.height - 15);
+	btn_recorder_reset = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 2.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
 
 	// start button
 	pg_recorder.noFill();
 	pg_recorder.rect(BTN_WIDTH * 3, pg_recorder.height - 30, BTN_WIDTH * 4, pg_recorder.height);
 	pg_recorder.fill(#FF9800);
-	pg_recorder.text("START", BTN_WIDTH * 3.5, pg_recorder.height - 15);
+	pg_recorder.text(record_stat ? "STOP" : "START", BTN_WIDTH * 3.5, pg_recorder.height - 15);
+	btn_recorder_action = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 3.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
 
 	// underline
 	pg_recorder.stroke(#03A9F4);
@@ -336,5 +359,24 @@ void serialEvent(Serial p) {
 	catch (Exception e) {
 		println("Caught Exception");
 		println(e.toString());
+	}
+}
+
+void mousePressed() {
+	if (btn_recorder_add.isInside(mouseX, mouseY)) {
+		++record_sec_cnt;
+		println("ADD");
+	}
+	if (btn_recorder_sub.isInside(mouseX, mouseY)) {
+		if (record_sec_cnt > 0) --record_sec_cnt;
+		println("SUB");
+	}
+	if (btn_recorder_reset.isInside(mouseX, mouseY)) {
+		record_sec_cnt = 0;
+		println("RESET");
+	}
+	if (btn_recorder_action.isInside(mouseX, mouseY)) {
+		record_stat = !record_stat;
+		println("ACTION");
 	}
 }
