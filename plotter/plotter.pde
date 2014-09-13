@@ -4,12 +4,28 @@
  *       Desc: Processing code for plot GY-80 raw data
  *     Author: KuoE0
  *      Email: kuoe0.tw@gmail.com
- *   HomePage: http://kuoe0.ch/
- * LastChange: 2014-09-12 16:56:31
+ *   HomePage: http://blog.kuoe0.tw/
  *=============================================================================
  */
 
 import processing.serial.*;
+
+class Button {
+	public int x, y, width_radius, height_radius;
+	public Button(int _x, int _y, int _w, int _h) {
+		this.x = _x;
+		this.y = _y;
+		this.width_radius = _w;
+		this.height_radius = _h;
+	}
+	public boolean isInside(int _x, int _y) {
+		return _x >= this.x - this.width_radius && _x <= this.x + this.width_radius && _y >= this.y - this.height_radius && _y <= this.y + this.height_radius;
+	}
+	int getLeftTopX() { return this.x - this.width_radius; }
+	int getLeftTopY() { return this.y - this.height_radius; }
+	int getRightBottomX() { return this.x + this.width_radius; }
+	int getRightBottomY() { return this.y + this.height_radius; }
+};
 
 Serial myPort;
 final int MAX_SAMPLE = 400;
@@ -18,20 +34,25 @@ int update_ptr = MAX_SAMPLE;
 float[] accel_x = new float[MAX_SAMPLE];
 float[] accel_y = new float[MAX_SAMPLE];
 float[] accel_z = new float[MAX_SAMPLE];
+int record_sec = 0, record_timer_begin = 0, record_timer_now = 0;
+boolean record_stat = false;
 
 String received_data;
 String[] data_list;
 
 int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 int WINDOW_PADDING = 20;
-int CHART_CARD_WIDTH = 480, CHART_CARD_HEIGHT = WINDOW_HEIGHT - WINDOW_PADDING * 2;
+int COLUMN_WIDHT_1 = 480, COLUMN_WIDHT_2 = 260;
+int CHART_CARD_HEIGHT = WINDOW_HEIGHT - WINDOW_PADDING * 2, RECORDER_CARD_HEIGHT = 130;
 int CHART_INTERVAL = 50, CHART_WIDTH = MAX_SAMPLE, CHART_HEIGHT = CHART_INTERVAL * 8;
 color CLR_ACCEL_X = #FF5722, CLR_ACCEL_Y = #259B24, CLR_ACCEL_Z = #03A9F4;
 color CLR_GYRO_X = #E51C23, CLR_GYRO_Y = #5677FC, CLR_GYRO_Z = #009688;
 color CLR_MAGN_X = #795548, CLR_MAGN_Y = #FFC107, CLR_MAGN_Z = #9C27B0;
 
-PFont font;
-PGraphics pg_chart, pg_legend;
+PFont helveticaLight, helveticaMedium, helveticaUltraLight;
+PGraphics pg_chart, pg_legend, pg_recorder;
+PrintWriter file_output;
+Button btn_recorder_add, btn_recorder_sub, btn_recorder_reset, btn_recorder_action;
 
 void setup() {
 
@@ -46,8 +67,10 @@ void setup() {
 		myPort.bufferUntil('\n');
 	}
 
-	font = createFont("HelveticaNeue-Light", 22, true);
-	textFont(font);
+	helveticaUltraLight = createFont("HelveticaNeue-Ultralight", 22, true);
+	helveticaLight = createFont("HelveticaNeue-Light", 22, true);
+	helveticaMedium = createFont("HelveticaNeue-Medium", 22, true);
+	textFont(helveticaLight);
 
 	for (int i = 0; i < MAX_SAMPLE; ++i) {
 		accel_x[i] = accel_y[i] = accel_z[i] = 0;
@@ -57,9 +80,20 @@ void setup() {
 void draw() {
 	background(225);
 
+	// recorder is on
+	if (record_stat) {
+		// record current time
+		record_timer_now = millis();
+		// timer is end
+		if (record_sec - int((record_timer_now - record_timer_begin) / 1000) == 0) {
+			record_stat = false;
+			stop_record();
+		}
+	}
+
 	draw_chart();
-	// gen_random_signal();
-	delay(10);
+	draw_recorder();
+
 }
 
 // search for the Arduino device
@@ -104,10 +138,10 @@ void card(int x, int y, int width, int height) {
 void draw_chart() {
 
 	// draw card
-	card(WINDOW_PADDING, WINDOW_PADDING, CHART_CARD_WIDTH, CHART_CARD_HEIGHT);
+	card(WINDOW_PADDING, WINDOW_PADDING, COLUMN_WIDHT_1, CHART_CARD_HEIGHT);
 
 	// draw unit
-	fill(33);
+	fill(32);
 	textSize(16);
 	textAlign(RIGHT, CENTER);
 	text(str(0), WINDOW_PADDING * 3.5, WINDOW_PADDING * 3 + CHART_INTERVAL * 4);
@@ -204,7 +238,83 @@ void draw_chart() {
 
 }
 
-void gen_random_signal() {
+void draw_recorder() {
+	card(WINDOW_PADDING * 2 + COLUMN_WIDHT_1, WINDOW_PADDING, COLUMN_WIDHT_2, RECORDER_CARD_HEIGHT);
+
+	pg_recorder = createGraphics(COLUMN_WIDHT_2, RECORDER_CARD_HEIGHT);
+
+	pg_recorder.beginDraw();
+	pg_recorder.background(255);
+
+	// title
+	pg_recorder.fill(33);
+	pg_recorder.textSize(20);
+	pg_recorder.textAlign(LEFT, TOP);
+	pg_recorder.textFont(helveticaLight);
+	pg_recorder.text("Recorder", WINDOW_PADDING, WINDOW_PADDING);
+
+	// buttons
+	int BTN_WIDTH = 65;
+	pg_recorder.rectMode(CORNERS);
+	pg_recorder.noStroke();
+	pg_recorder.textFont(helveticaMedium);
+	pg_recorder.textSize(14);
+	pg_recorder.textAlign(CENTER, CENTER);
+
+	// + button
+	pg_recorder.noFill();
+	pg_recorder.rect(0, pg_recorder.height - 30, BTN_WIDTH, pg_recorder.height);
+	pg_recorder.fill(33);
+	pg_recorder.text("+", BTN_WIDTH * 0.5, pg_recorder.height - 15);
+	btn_recorder_add = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 0.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
+
+	// - button
+	pg_recorder.noFill();
+	pg_recorder.rect(BTN_WIDTH, pg_recorder.height - 30, BTN_WIDTH * 2, pg_recorder.height);
+	pg_recorder.fill(33);
+	pg_recorder.text("-", BTN_WIDTH * 1.5, pg_recorder.height - 15);
+	btn_recorder_sub = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 1.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
+
+	// reset button
+	pg_recorder.noFill();
+	pg_recorder.rect(BTN_WIDTH * 2, pg_recorder.height - 30, BTN_WIDTH * 3, pg_recorder.height);
+	pg_recorder.fill(33);
+	pg_recorder.text("RESET", BTN_WIDTH * 2.5, pg_recorder.height - 15);
+	btn_recorder_reset = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 2.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
+
+	// start button
+	pg_recorder.noFill();
+	pg_recorder.rect(BTN_WIDTH * 3, pg_recorder.height - 30, BTN_WIDTH * 4, pg_recorder.height);
+	pg_recorder.fill(#FF9800);
+	pg_recorder.text(record_stat ? "STOP" : "START", BTN_WIDTH * 3.5, pg_recorder.height - 15);
+	btn_recorder_action = new Button(int(WINDOW_PADDING * 2 + COLUMN_WIDHT_1 + BTN_WIDTH * 3.5), WINDOW_PADDING + pg_recorder.height - 15, int(BTN_WIDTH * 0.5), 15);
+
+	// underline
+	pg_recorder.stroke(#03A9F4);
+	pg_recorder.line(WINDOW_PADDING, pg_recorder.height - 38, pg_recorder.width / 2, pg_recorder.height - 38);
+	pg_recorder.line(WINDOW_PADDING, pg_recorder.height - 39, pg_recorder.width / 2, pg_recorder.height - 39);
+	pg_recorder.line(WINDOW_PADDING, pg_recorder.height - 40, pg_recorder.width / 2, pg_recorder.height - 40);
+	// record time
+	pg_recorder.textFont(helveticaUltraLight);
+	pg_recorder.fill(117);
+	pg_recorder.textSize(40);
+	pg_recorder.textAlign(RIGHT, BOTTOM);
+	pg_recorder.text(str(record_sec - int((record_timer_now - record_timer_begin) / 1000)), pg_recorder.width / 2, pg_recorder.height - 40);
+
+	// second hint text
+	pg_recorder.fill(188);
+	pg_recorder.textSize(16);
+	pg_recorder.textFont(helveticaLight);
+	pg_recorder.textAlign(LEFT, BOTTOM);
+	pg_recorder.text("second", pg_recorder.width / 2 + WINDOW_PADDING, pg_recorder.height - 40);
+
+	pg_recorder.endDraw();
+	// put on card
+	image(pg_recorder, WINDOW_PADDING * 2 + COLUMN_WIDHT_1, WINDOW_PADDING);
+
+}
+// generate random sample
+void gen_random_sample() {
 
 	float x = random(-100, 100);
 	float y = random(200, 300);
@@ -223,7 +333,6 @@ void gen_random_signal() {
 
 void serialEvent(Serial p) {
 
-
 	try {
 		received_data = myPort.readStringUntil('\n');
 		received_data = trim(received_data);
@@ -237,13 +346,20 @@ void serialEvent(Serial p) {
 	try {
 		if (received_data != null) {
 
+
 			data_list = split(received_data, ':');
 
 			if (data_list.length == 3) {
 
+
 				float ax = float(trim(data_list[0]));
 				float ay = float(trim(data_list[1]));
 				float az = float(trim(data_list[2]));
+
+				// record data to file
+				if (record_stat) {
+					file_output.println(join(data_list, ','));
+				}
 
 				if (update_ptr >= MAX_SAMPLE)
 					update_ptr = 0;
@@ -260,4 +376,41 @@ void serialEvent(Serial p) {
 		println("Caught Exception");
 		println(e.toString());
 	}
+}
+
+void mousePressed() {
+	if (btn_recorder_add.isInside(mouseX, mouseY)) {
+		++record_sec;
+		return;
+	}
+	if (btn_recorder_sub.isInside(mouseX, mouseY)) {
+		if (record_sec > 0) --record_sec;
+		return;
+	}
+	if (btn_recorder_reset.isInside(mouseX, mouseY)) {
+		record_sec = 0;
+		return;
+	}
+	if (btn_recorder_action.isInside(mouseX, mouseY)) {
+		if (record_sec > 0) {
+			record_stat = !record_stat;
+			if (record_stat) start_record();
+			else stop_record();
+		}
+		return;
+	}
+}
+// start to record data
+void start_record() {
+	// open new file and name it to current datetime
+	file_output = createWriter(str(year()) + str(month()) + str(day()) + "-" + str(hour()) + str(minute()) + str(second()) + ".csv");
+	record_timer_begin = millis();
+}
+// stop to record data
+void stop_record() {
+	// close file
+	file_output.flush();
+	file_output.close();
+	// reset timer
+	record_sec = record_timer_now = record_timer_begin = 0;
 }
