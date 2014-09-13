@@ -34,7 +34,7 @@ int update_ptr = MAX_SAMPLE;
 float[] accel_x = new float[MAX_SAMPLE];
 float[] accel_y = new float[MAX_SAMPLE];
 float[] accel_z = new float[MAX_SAMPLE];
-int record_sec_cnt = 0;
+int record_sec = 0, record_timer_begin = 0, record_timer_now = 0;
 boolean record_stat = false;
 
 String received_data;
@@ -51,6 +51,7 @@ color CLR_MAGN_X = #795548, CLR_MAGN_Y = #FFC107, CLR_MAGN_Z = #9C27B0;
 
 PFont helveticaLight, helveticaMedium, helveticaUltraLight;
 PGraphics pg_chart, pg_legend, pg_recorder;
+PrintWriter file_output;
 Button btn_recorder_add, btn_recorder_sub, btn_recorder_reset, btn_recorder_action;
 
 void setup() {
@@ -79,11 +80,20 @@ void setup() {
 void draw() {
 	background(225);
 
+	// recorder is on
+	if (record_stat) {
+		// record current time
+		record_timer_now = millis();
+		// timer is end
+		if (record_sec - int((record_timer_now - record_timer_begin) / 1000) == 0) {
+			record_stat = false;
+			stop_record();
+		}
+	}
+
 	draw_chart();
 	draw_recorder();
 
-	// gen_random_signal();
-	delay(10);
 }
 
 // search for the Arduino device
@@ -289,7 +299,7 @@ void draw_recorder() {
 	pg_recorder.fill(117);
 	pg_recorder.textSize(40);
 	pg_recorder.textAlign(RIGHT, BOTTOM);
-	pg_recorder.text(str(record_sec_cnt), pg_recorder.width / 2, pg_recorder.height - 40);
+	pg_recorder.text(str(record_sec - int((record_timer_now - record_timer_begin) / 1000)), pg_recorder.width / 2, pg_recorder.height - 40);
 
 	// second hint text
 	pg_recorder.fill(188);
@@ -303,8 +313,8 @@ void draw_recorder() {
 	image(pg_recorder, WINDOW_PADDING * 2 + COLUMN_WIDHT_1, WINDOW_PADDING);
 
 }
-
-void gen_random_signal() {
+// generate random sample
+void gen_random_sample() {
 
 	float x = random(-100, 100);
 	float y = random(200, 300);
@@ -322,7 +332,6 @@ void gen_random_signal() {
 }
 
 void serialEvent(Serial p) {
-
 
 	try {
 		received_data = myPort.readStringUntil('\n');
@@ -364,19 +373,37 @@ void serialEvent(Serial p) {
 
 void mousePressed() {
 	if (btn_recorder_add.isInside(mouseX, mouseY)) {
-		++record_sec_cnt;
-		println("ADD");
+		++record_sec;
+		return;
 	}
 	if (btn_recorder_sub.isInside(mouseX, mouseY)) {
-		if (record_sec_cnt > 0) --record_sec_cnt;
-		println("SUB");
+		if (record_sec > 0) --record_sec;
+		return;
 	}
 	if (btn_recorder_reset.isInside(mouseX, mouseY)) {
-		record_sec_cnt = 0;
-		println("RESET");
+		record_sec = 0;
+		return;
 	}
 	if (btn_recorder_action.isInside(mouseX, mouseY)) {
-		record_stat = !record_stat;
-		println("ACTION");
+		if (record_sec > 0) {
+			record_stat = !record_stat;
+			if (record_stat) start_record();
+			else stop_record();
+		}
+		return;
 	}
+}
+// start to record data
+void start_record() {
+	// open new file and name it to current datetime
+	file_output = createWriter(str(year()) + str(month()) + str(day()) + "-" + str(hour()) + str(minute()) + str(second()) + ".data");
+	record_timer_begin = millis();
+}
+// stop to record data
+void stop_record() {
+	// close file
+	file_output.flush();
+	file_output.close();
+	// reset timer
+	record_sec = record_timer_now = record_timer_begin = 0;
 }
