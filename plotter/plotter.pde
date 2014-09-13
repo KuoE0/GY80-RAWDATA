@@ -346,13 +346,20 @@ void serialEvent(Serial p) {
 	try {
 		if (received_data != null) {
 
+
 			data_list = split(received_data, ':');
 
 			if (data_list.length == 3) {
 
+
 				float ax = float(trim(data_list[0]));
 				float ay = float(trim(data_list[1]));
 				float az = float(trim(data_list[2]));
+
+				// record data to file
+				if (record_stat) {
+					file_output.println(join(data_list, ','));
+				}
 
 				if (update_ptr >= MAX_SAMPLE)
 					update_ptr = 0;
@@ -396,7 +403,7 @@ void mousePressed() {
 // start to record data
 void start_record() {
 	// open new file and name it to current datetime
-	file_output = createWriter(str(year()) + str(month()) + str(day()) + "-" + str(hour()) + str(minute()) + str(second()) + ".data");
+	file_output = createWriter(str(year()) + str(month()) + str(day()) + "-" + str(hour()) + str(minute()) + str(second()) + ".csv");
 	record_timer_begin = millis();
 }
 // stop to record data
