@@ -1,12 +1,12 @@
-[submodule "arduino-raw-tx/lib/L3G4200D"]
-	path = arduino-raw-tx/lib/L3G4200D
+[submodule "ArduinoTx/lib/L3G4200D"]
+	path = ArduinoTx/lib/L3G4200D
 	url = git@github.com:jarzebski/Arduino-L3G4200D.git
-[submodule "arduino-raw-tx/lib/ADXL345"]
-	path = arduino-raw-tx/lib/ADXL345
+[submodule "ArduinoTx/lib/ADXL345"]
+	path = ArduinoTx/lib/ADXL345
 	url = git@github.com:jarzebski/Arduino-ADXL345.git
-[submodule "arduino-raw-tx/lib/HMC5883L"]
-	path = arduino-raw-tx/lib/HMC5883L
+[submodule "ArduinoTx/lib/HMC5883L"]
+	path = ArduinoTx/lib/HMC5883L
 	url = git@github.com:jarzebski/Arduino-HMC5883L.git
-[submodule "arduino-raw-tx/lib/BMP185"]
-	path = arduino-raw-tx/lib/BMP185
+[submodule "ArduinoTx/lib/BMP185"]
+	path = ArduinoTx/lib/BMP185
 	url = git@github.com:jarzebski/Arduino-BMP085-BMP180.git
