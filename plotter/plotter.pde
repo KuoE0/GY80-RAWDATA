@@ -34,6 +34,7 @@ int update_ptr = MAX_SAMPLE;
 float[] accel_x = new float[MAX_SAMPLE];
 float[] accel_y = new float[MAX_SAMPLE];
 float[] accel_z = new float[MAX_SAMPLE];
+
 int record_sec = 0, record_timer_begin = 0, record_timer_now = 0;
 boolean record_stat = false;
 
@@ -144,10 +145,10 @@ void draw_chart() {
 	fill(32);
 	textSize(16);
 	textAlign(RIGHT, CENTER);
-	text(str(0), WINDOW_PADDING * 3.5, WINDOW_PADDING * 3 + CHART_INTERVAL * 4);
+	text(str(0), WINDOW_PADDING * 3.5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2);
 	for (int i = 1; i <= 4; ++i) {
-		text(str(128 * i), WINDOW_PADDING * 3.5, WINDOW_PADDING * 3 + CHART_INTERVAL * (4 - i));
-		text(str(-128 * i), WINDOW_PADDING * 3.5, WINDOW_PADDING * 3 + CHART_INTERVAL * (4 + i));
+		text(str(128 * i), WINDOW_PADDING * 3.5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2 - CHART_INTERVAL * i);
+		text(str(-128 * i), WINDOW_PADDING * 3.5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2 + CHART_INTERVAL * i);
 	}
 
 	// draw chart
@@ -313,6 +314,7 @@ void draw_recorder() {
 	image(pg_recorder, WINDOW_PADDING * 2 + COLUMN_WIDHT_1, WINDOW_PADDING);
 
 }
+
 // generate random sample
 void gen_random_sample() {
 
@@ -350,7 +352,6 @@ void serialEvent(Serial p) {
 			data_list = split(received_data, ':');
 
 			if (data_list.length == 3) {
-
 
 				float ax = float(trim(data_list[0]));
 				float ay = float(trim(data_list[1]));
