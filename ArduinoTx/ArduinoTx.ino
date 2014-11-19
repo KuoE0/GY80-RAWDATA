@@ -21,7 +21,7 @@ void setup() {
 		delay(1000);
 	}
 
-	if (!gyro.begin(L3G4200D_SCALE_250DPS, L3G4200D_DATARATE_200HZ_50)) {
+	if (!gyro.begin(L3G4200D_SCALE_2000DPS, L3G4200D_DATARATE_200HZ_50)) {
 		Serial.println("Initialize L3G4200D failed...");
 		delay(1000);
 	}
