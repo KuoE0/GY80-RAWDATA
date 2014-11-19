@@ -29,11 +29,16 @@ class Button {
 
 Serial myPort;
 final int MAX_SAMPLE = 400;
+final int RESOLUTION = (1 << 10);
+final int Y_GRID_INTERVAL = (RESOLUTION >> 3);
 
 int update_ptr = MAX_SAMPLE;
 float[] accel_x = new float[MAX_SAMPLE];
 float[] accel_y = new float[MAX_SAMPLE];
 float[] accel_z = new float[MAX_SAMPLE];
+float[] gyro_x = new float[MAX_SAMPLE];
+float[] gyro_y = new float[MAX_SAMPLE];
+float[] gyro_z = new float[MAX_SAMPLE];
 
 int record_sec = 0, record_timer_begin = 0, record_timer_now = 0;
 boolean record_stat = false;
@@ -48,7 +53,6 @@ int CHART_CARD_HEIGHT = WINDOW_HEIGHT - WINDOW_PADDING * 2, RECORDER_CARD_HEIGHT
 int CHART_INTERVAL = 50, CHART_WIDTH = MAX_SAMPLE, CHART_HEIGHT = CHART_INTERVAL * 8;
 color CLR_ACCEL_X = #FF5722, CLR_ACCEL_Y = #259B24, CLR_ACCEL_Z = #03A9F4;
 color CLR_GYRO_X = #E51C23, CLR_GYRO_Y = #5677FC, CLR_GYRO_Z = #009688;
-color CLR_MAGN_X = #795548, CLR_MAGN_Y = #FFC107, CLR_MAGN_Z = #9C27B0;
 
 PFont helveticaLight, helveticaMedium, helveticaUltraLight;
 PGraphics pg_chart, pg_legend, pg_recorder;
@@ -63,7 +67,7 @@ void setup() {
 
 	if (port_idx != -1) {
 		String portName = Serial.list()[port_idx];
-		myPort = new Serial(this, portName, 9600);
+		myPort = new Serial(this, portName, 115200);
 		myPort.clear();
 		myPort.bufferUntil('\n');
 	}
@@ -76,6 +80,8 @@ void setup() {
 	for (int i = 0; i < MAX_SAMPLE; ++i) {
 		accel_x[i] = accel_y[i] = accel_z[i] = 0;
 	}
+	println(RESOLUTION);
+	println(Y_GRID_INTERVAL);
 }
 
 void draw() {
@@ -147,8 +153,8 @@ void draw_chart() {
 	textAlign(RIGHT, CENTER);
 	text(str(0), WINDOW_PADDING * 3.5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2);
 	for (int i = 1; i <= 4; ++i) {
-		text(str(128 * i), WINDOW_PADDING * 3.5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2 - CHART_INTERVAL * i);
-		text(str(-128 * i), WINDOW_PADDING * 3.5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2 + CHART_INTERVAL * i);
+		text(str(Y_GRID_INTERVAL * i), WINDOW_PADDING * 3.5 + 5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2 - CHART_INTERVAL * i);
+		text(str(-Y_GRID_INTERVAL * i), WINDOW_PADDING * 3.5 + 5, WINDOW_PADDING * 2.5 + CHART_HEIGHT / 2 + CHART_INTERVAL * i);
 	}
 
 	// draw chart
@@ -170,13 +176,23 @@ void draw_chart() {
 		
 		// x-axis acceleration
 		pg_chart.stroke(CLR_ACCEL_X);
-		pg_chart.line(i * 2, -accel_x[p1] * 50 / 128, i * 2 + 1, -accel_x[p2] * 50 / 128);
+		pg_chart.line(i * 2, -accel_x[p1] * 50 / Y_GRID_INTERVAL, i * 2 + 1, -accel_x[p2] * 50 / Y_GRID_INTERVAL);
 		// y-axis acceleration
 		pg_chart.stroke(CLR_ACCEL_Y);
-		pg_chart.line(i * 2, -accel_y[p1] * 50 / 128, i * 2 + 1, -accel_y[p2] * 50 / 128);
+		pg_chart.line(i * 2, -accel_y[p1] * 50 / Y_GRID_INTERVAL, i * 2 + 1, -accel_y[p2] * 50 / Y_GRID_INTERVAL);
 		// z-axis acceleration
 		pg_chart.stroke(CLR_ACCEL_Z);
-		pg_chart.line(i * 2, -accel_z[p1] * 50 / 128, i * 2 + 1, -accel_z[p2] * 50 / 128);
+		pg_chart.line(i * 2, -accel_z[p1] * 50 / Y_GRID_INTERVAL, i * 2 + 1, -accel_z[p2] * 50 / Y_GRID_INTERVAL);
+
+		// x-axis acceleration
+		pg_chart.stroke(CLR_GYRO_X);
+		pg_chart.line(i * 2, -gyro_x[p1] * 50 / Y_GRID_INTERVAL, i * 2 + 1, -gyro_x[p2] * 50 / Y_GRID_INTERVAL);
+		// y-axis angular velocity
+		pg_chart.stroke(CLR_GYRO_Y);
+		pg_chart.line(i * 2, -gyro_y[p1] * 50 / Y_GRID_INTERVAL, i * 2 + 1, -gyro_y[p2] * 50 / Y_GRID_INTERVAL);
+		// z-axis angular velocity
+		pg_chart.stroke(CLR_GYRO_Z);
+		pg_chart.line(i * 2, -gyro_z[p1] * 50 / Y_GRID_INTERVAL, i * 2 + 1, -gyro_z[p2] * 50 / Y_GRID_INTERVAL);
 	}
 
 	pg_chart.endDraw();
@@ -218,19 +234,6 @@ void draw_chart() {
 	pg_legend.fill(CLR_GYRO_Z);
 	pg_legend.rect(-5 - 30, 35, 5 - 30, 25);
 	pg_legend.text("GYRO_Z", -20, 30 - 2);
-
-	// magnetometer
-	pg_legend.fill(CLR_MAGN_X);
-	pg_legend.rect(-5 - 30 + 140, -25, 5 - 30 + 140, -35);
-	pg_legend.text("MAGN_X", -20 + 140, -30 - 2);
-
-	pg_legend.fill(CLR_MAGN_Y);
-	pg_legend.rect(-5 - 30 + 140, 5, 5 - 30 + 140, -5);
-	pg_legend.text("MAGN_Y", -20 + 140, 0 - 2);
-
-	pg_legend.fill(CLR_MAGN_Z);
-	pg_legend.rect(-5 - 30 + 140, 35, 5 - 30 + 140, 25);
-	pg_legend.text("MAGN_Z", -20 + 140, 30 - 2);
 
 	pg_legend.endDraw();
 
@@ -348,14 +351,16 @@ void serialEvent(Serial p) {
 	try {
 		if (received_data != null) {
 
-
 			data_list = split(received_data, ':');
 
-			if (data_list.length == 3) {
+			if (data_list.length == 6) {
 
 				float ax = float(trim(data_list[0]));
 				float ay = float(trim(data_list[1]));
 				float az = float(trim(data_list[2]));
+				float gx = float(trim(data_list[3]));
+				float gy = float(trim(data_list[4]));
+				float gz = float(trim(data_list[5]));
 
 				// record data to file
 				if (record_stat) {
@@ -368,6 +373,9 @@ void serialEvent(Serial p) {
 				accel_x[update_ptr] = ax;
 				accel_y[update_ptr] = ay;
 				accel_z[update_ptr] = az;
+				gyro_x[update_ptr] = gx;
+				gyro_y[update_ptr] = gy;
+				gyro_z[update_ptr] = gz;
 
 				++update_ptr;
 			}
