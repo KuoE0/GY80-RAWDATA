@@ -8,6 +8,7 @@
 ADXL345 accel;
 L3G4200D gyro;
 Vector raw_acc, raw_gyr;
+Timer tcb;
 
 void setup() {
 
@@ -27,14 +28,19 @@ void setup() {
 
 	accel.setRange(ADXL345_RANGE_2G);
 	accel.setDataRate(ADXL345_DATARATE_200HZ);
+
+	tcb.every(5, updateSample); // 200Hz
 }
 
 
 void loop() {
 
+	tcb.update();
+}
+
+void updateSample() {
 	raw_acc = accel.readRaw();
 	raw_gyr = gyro.readRaw();
-	
 
 	Serial.print(raw_acc.XAxis);
 	Serial.print(":");
@@ -48,6 +54,5 @@ void loop() {
 	Serial.print(":");
 	Serial.println(raw_gyr.ZAxis);
 
-	delay(10);
 }
 
