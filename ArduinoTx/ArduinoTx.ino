@@ -3,13 +3,15 @@
 #include <ADXL345.h>  // accelerometer library
 #include <HMC5883L.h> // digital compass library
 #include <BMP085.h>   // barometric pressure & temperature sensor library
+#include <Timer.h>
 
 ADXL345 accel;
-Vector raw, norm;
+L3G4200D gyro;
+Vector raw_acc, raw_gyr;
 
 void setup() {
 
-	Serial.begin(9600);
+	Serial.begin(115200);
 	Wire.begin();
 
 	Serial.println("Initialize ADXL345...");
@@ -18,20 +20,33 @@ void setup() {
 		delay(1000);
 	}
 
+	if (!gyro.begin(L3G4200D_SCALE_250DPS, L3G4200D_DATARATE_200HZ_50)) {
+		Serial.println("Initialize L3G4200D failed...");
+		delay(1000);
+	}
+
 	accel.setRange(ADXL345_RANGE_2G);
-	accel.setDataRate(ADXL345_DATARATE_100HZ);
+	accel.setDataRate(ADXL345_DATARATE_200HZ);
 }
 
 
 void loop() {
 
-	raw = accel.readRaw();
+	raw_acc = accel.readRaw();
+	raw_gyr = gyro.readRaw();
+	
 
-	Serial.print(raw.XAxis);
+	Serial.print(raw_acc.XAxis);
 	Serial.print(":");
-	Serial.print(raw.YAxis);
+	Serial.print(raw_acc.YAxis);
 	Serial.print(":");
-	Serial.println(raw.ZAxis);
+	Serial.print(raw_acc.ZAxis);
+	Serial.print(":");
+	Serial.print(raw_gyr.XAxis);
+	Serial.print(":");
+	Serial.print(raw_gyr.YAxis);
+	Serial.print(":");
+	Serial.println(raw_gyr.ZAxis);
 
 	delay(10);
 }
